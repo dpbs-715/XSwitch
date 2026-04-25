@@ -32,6 +32,7 @@ export async function fetchSubscription(url: string): Promise<string> {
           "user-agent": userAgent,
         },
         cache: "no-store",
+        signal: AbortSignal.timeout(12_000),
       });
 
       if (!response.ok) {
@@ -46,9 +47,7 @@ export async function fetchSubscription(url: string): Promise<string> {
 
       errors.push(`${userAgent}: ${content.trim() ? "非订阅内容" : "空内容"}`);
     } catch (error) {
-      errors.push(
-        `${userAgent}: ${error instanceof Error ? error.message : "请求失败"}`,
-      );
+      errors.push(`${userAgent}: ${formatFetchError(error)}`);
     }
   }
 
@@ -206,6 +205,32 @@ function contentLooksLikeSubscription(content: string) {
     /(^|\n)\s*(vmess|vless|trojan|ss):\/\//.test(decoded) ||
     /^\s*proxies\s*:/m.test(decoded)
   );
+}
+
+function formatFetchError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "请求失败";
+  }
+
+  const cause = error.cause;
+  if (cause && typeof cause === "object") {
+    const detail = cause as {
+      code?: string;
+      address?: string;
+      port?: number;
+      message?: string;
+    };
+    return [
+      error.message,
+      detail.code,
+      detail.address ? `${detail.address}:${detail.port ?? ""}` : "",
+      detail.message && detail.message !== error.message ? detail.message : "",
+    ]
+      .filter(Boolean)
+      .join(" / ");
+  }
+
+  return error.message;
 }
 
 function extractClashProxyEntries(content: string) {
