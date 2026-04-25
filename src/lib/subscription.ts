@@ -41,7 +41,7 @@ export function parseSubscription(content: string): SubscriptionNode[] {
     }
   });
 
-  return dedupeNodes(nodes);
+  return dedupeNodes([...nodes, ...parseClashProxies(decoded)]);
 }
 
 export function toXrayOutbound(node: SubscriptionNode, tag: string) {
@@ -145,6 +145,220 @@ function parseNodeUri(raw: string): ParsedUrlNode | null {
   }
 
   return null;
+}
+
+function parseClashProxies(content: string): SubscriptionNode[] {
+  if (!/^\s*proxies\s*:/m.test(content)) {
+    return [];
+  }
+
+  const entries = extractClashProxyEntries(content);
+  return entries.flatMap((entry) => {
+    try {
+      const node = clashProxyToParsedNode(entry);
+      return node ? [toSubscriptionNode(JSON.stringify(entry), node)] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+
+function extractClashProxyEntries(content: string) {
+  const lines = content.split(/\r?\n/);
+  const entries: Array<Record<string, unknown>> = [];
+  let inProxies = false;
+  let current: Record<string, unknown> | null = null;
+
+  for (const line of lines) {
+    if (/^\s*proxies\s*:\s*$/.test(line)) {
+      inProxies = true;
+      continue;
+    }
+
+    if (!inProxies) {
+      continue;
+    }
+
+    if (/^\S/.test(line) && !line.startsWith("proxies:")) {
+      break;
+    }
+
+    const itemMatch = line.match(/^\s*-\s*(.*)$/);
+    if (itemMatch) {
+      if (current) {
+        entries.push(current);
+      }
+      current = {};
+      const rest = itemMatch[1].trim();
+      if (rest.startsWith("{") && rest.endsWith("}")) {
+        current = parseInlineYamlObject(rest);
+        entries.push(current);
+        current = null;
+      } else if (rest.includes(":")) {
+        const [key, value] = splitYamlPair(rest);
+        current[key] = parseYamlScalar(value);
+      }
+      continue;
+    }
+
+    if (current) {
+      const pairMatch = line.match(/^\s+([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+      if (pairMatch) {
+        current[pairMatch[1]] = parseYamlScalar(pairMatch[2]);
+      }
+    }
+  }
+
+  if (current) {
+    entries.push(current);
+  }
+
+  return entries;
+}
+
+function clashProxyToParsedNode(
+  proxy: Record<string, unknown>,
+): ParsedUrlNode | null {
+  const type = stringValue(proxy.type).toLowerCase();
+  if (!["vmess", "vless", "trojan", "ss", "shadowsocks"].includes(type)) {
+    return null;
+  }
+
+  const address = stringValue(proxy.server);
+  const port = numberValue(proxy.port);
+  const name = stringValue(proxy.name) || address;
+
+  if (type === "vmess") {
+    return {
+      name,
+      protocol: "vmess",
+      address,
+      port,
+      config: {
+        id: proxy.uuid,
+        alterId: proxy.alterId ?? proxy.alterid ?? 0,
+        security: proxy.cipher ?? "auto",
+        network: proxy.network ?? "tcp",
+        tls: proxy.tls === true ? "tls" : "",
+        sni: proxy.servername,
+        host: proxy.host,
+        path: proxy.path,
+      },
+    };
+  }
+
+  if (type === "vless") {
+    return {
+      name,
+      protocol: "vless",
+      address,
+      port,
+      config: {
+        id: proxy.uuid,
+        encryption: "none",
+        flow: proxy.flow,
+        network: proxy.network ?? "tcp",
+        tls: proxy.tls === true ? "tls" : stringValue(proxy.security),
+        sni: proxy.servername,
+        host: proxy.host,
+        path: proxy.path,
+      },
+    };
+  }
+
+  if (type === "trojan") {
+    return {
+      name,
+      protocol: "trojan",
+      address,
+      port,
+      config: {
+        password: proxy.password,
+        network: proxy.network ?? "tcp",
+        tls: "tls",
+        sni: proxy.sni ?? proxy.servername,
+      },
+    };
+  }
+
+  if (type === "ss" || type === "shadowsocks") {
+    return {
+      name,
+      protocol: "ss",
+      address,
+      port,
+      config: {
+        method: proxy.cipher,
+        password: proxy.password,
+      },
+    };
+  }
+
+  return null;
+}
+
+function parseInlineYamlObject(value: string) {
+  const body = value.slice(1, -1);
+  const result: Record<string, unknown> = {};
+
+  for (const part of splitInlineYamlParts(body)) {
+    if (!part.includes(":")) {
+      continue;
+    }
+    const [key, rawValue] = splitYamlPair(part);
+    result[key] = parseYamlScalar(rawValue);
+  }
+
+  return result;
+}
+
+function splitInlineYamlParts(value: string) {
+  const parts: string[] = [];
+  let current = "";
+  let quote: string | null = null;
+
+  for (const char of value) {
+    if ((char === '"' || char === "'") && quote === null) {
+      quote = char;
+    } else if (char === quote) {
+      quote = null;
+    }
+
+    if (char === "," && quote === null) {
+      parts.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  if (current.trim()) {
+    parts.push(current.trim());
+  }
+
+  return parts;
+}
+
+function splitYamlPair(value: string): [string, string] {
+  const index = value.indexOf(":");
+  return [value.slice(0, index).trim(), value.slice(index + 1).trim()];
+}
+
+function parseYamlScalar(value: string): unknown {
+  const trimmed = value.trim();
+  const unquoted = trimmed.replace(/^["']|["']$/g, "");
+
+  if (unquoted === "true") {
+    return true;
+  }
+  if (unquoted === "false") {
+    return false;
+  }
+  if (/^\d+$/.test(unquoted)) {
+    return Number(unquoted);
+  }
+
+  return unquoted;
 }
 
 function parseVmess(raw: string): ParsedUrlNode {
