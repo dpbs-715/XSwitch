@@ -10,17 +10,21 @@ type ParsedUrlNode = {
   config: Record<string, unknown>;
 };
 
+const subscriptionUserAgents = [
+  "Shadowrocket/2.2.48",
+  "ClashforWindows/0.20.39",
+  "Clash.Meta",
+  "v2rayN/6.23",
+  "xswitch/0.1",
+] as const;
+
+const informationNodePattern =
+  /剩余流量|套餐到期|到期时间|官网|官方|流量|直连地址|更换客户端|邀请|返佣|https?:\/\/|bit\.ly|expire|traffic|subscription|status/i;
+
 export async function fetchSubscription(url: string): Promise<string> {
-  const attempts = [
-    "Shadowrocket/2.2.48",
-    "ClashforWindows/0.20.39",
-    "Clash.Meta",
-    "v2rayN/6.23",
-    "xswitch/0.1",
-  ];
   const errors: string[] = [];
 
-  for (const userAgent of attempts) {
+  for (const userAgent of subscriptionUserAgents) {
     try {
       const response = await fetch(url, {
         headers: {
@@ -36,11 +40,11 @@ export async function fetchSubscription(url: string): Promise<string> {
       }
 
       const content = await response.text();
-      if (content.trim()) {
+      if (contentLooksLikeSubscription(content)) {
         return content;
       }
 
-      errors.push(`${userAgent}: 空内容`);
+      errors.push(`${userAgent}: ${content.trim() ? "非订阅内容" : "空内容"}`);
     } catch (error) {
       errors.push(
         `${userAgent}: ${error instanceof Error ? error.message : "请求失败"}`,
@@ -67,7 +71,9 @@ export function parseSubscription(content: string): SubscriptionNode[] {
     }
   });
 
-  return dedupeNodes([...nodes, ...parseClashProxies(decoded)]);
+  return dedupeNodes([...nodes, ...parseClashProxies(decoded)]).filter(
+    isUsableNode,
+  );
 }
 
 export function toXrayOutbound(node: SubscriptionNode, tag: string) {
@@ -187,6 +193,19 @@ function parseClashProxies(content: string): SubscriptionNode[] {
       return [];
     }
   });
+}
+
+function contentLooksLikeSubscription(content: string) {
+  const trimmed = content.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  const decoded = maybeDecodeBase64(trimmed);
+  return (
+    /(^|\n)\s*(vmess|vless|trojan|ss):\/\//.test(decoded) ||
+    /^\s*proxies\s*:/m.test(decoded)
+  );
 }
 
 function extractClashProxyEntries(content: string) {
@@ -551,6 +570,30 @@ function dedupeNodes(nodes: SubscriptionNode[]) {
   });
 }
 
+function isUsableNode(node: SubscriptionNode) {
+  if (
+    informationNodePattern.test(node.name) ||
+    !node.address ||
+    !Number.isInteger(node.port) ||
+    node.port <= 0 ||
+    node.port > 65535
+  ) {
+    return false;
+  }
+
+  if (node.protocol === "vmess" || node.protocol === "vless") {
+    return Boolean(stringValue(node.config.id));
+  }
+
+  if (node.protocol === "trojan") {
+    return Boolean(stringValue(node.config.password));
+  }
+
+  return Boolean(
+    stringValue(node.config.method) && stringValue(node.config.password),
+  );
+}
+
 function inferRegion(name: string) {
   const rules: Array<[RegExp, string]> = [
     [/香港|港|hk|hong\s*kong/i, "香港"],
@@ -583,7 +626,8 @@ function maybeDecodeBase64(value: string) {
 
 function decodeBase64(value: string) {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+  const padding =
+    normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
   return Buffer.from(normalized + padding, "base64").toString("utf8");
 }
 
