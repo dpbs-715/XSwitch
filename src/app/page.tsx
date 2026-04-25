@@ -18,11 +18,7 @@ type Toast = {
 };
 
 export default function Home() {
-  const [password, setPassword] = useState(() =>
-    typeof window === "undefined"
-      ? ""
-      : (window.localStorage.getItem("xswitch-password") ?? ""),
-  );
+  const [password, setPassword] = useState("");
   const [subscriptionUrl, setSubscriptionUrl] = useState("");
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [nodes, setNodes] = useState<SubscriptionNode[]>([]);
@@ -56,9 +52,14 @@ export default function Home() {
   }, [nodes, protocol, query]);
 
   useEffect(() => {
-    const savedPassword = window.localStorage.getItem("xswitch-password") ?? "";
-    void loadStatus(savedPassword);
-    void loadNodes(savedPassword);
+    const timeoutId = window.setTimeout(() => {
+      const savedPassword = window.localStorage.getItem("xswitch-password") ?? "";
+      setPassword(savedPassword);
+      void loadStatus(savedPassword);
+      void loadNodes(savedPassword);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
