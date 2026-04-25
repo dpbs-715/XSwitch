@@ -11,18 +11,44 @@ type ParsedUrlNode = {
 };
 
 export async function fetchSubscription(url: string): Promise<string> {
-  const response = await fetch(url, {
-    headers: {
-      "user-agent": "xswitch/0.1",
-    },
-    cache: "no-store",
-  });
+  const attempts = [
+    "Shadowrocket/2.2.48",
+    "ClashforWindows/0.20.39",
+    "Clash.Meta",
+    "v2rayN/6.23",
+    "xswitch/0.1",
+  ];
+  const errors: string[] = [];
 
-  if (!response.ok) {
-    throw new Error(`订阅拉取失败：HTTP ${response.status}`);
+  for (const userAgent of attempts) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          accept: "*/*",
+          "user-agent": userAgent,
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        errors.push(`${userAgent}: HTTP ${response.status}`);
+        continue;
+      }
+
+      const content = await response.text();
+      if (content.trim()) {
+        return content;
+      }
+
+      errors.push(`${userAgent}: 空内容`);
+    } catch (error) {
+      errors.push(
+        `${userAgent}: ${error instanceof Error ? error.message : "请求失败"}`,
+      );
+    }
   }
 
-  return response.text();
+  throw new Error(`订阅拉取失败：${errors.join("；")}`);
 }
 
 export function parseSubscription(content: string): SubscriptionNode[] {
