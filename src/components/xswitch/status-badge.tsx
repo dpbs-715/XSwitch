@@ -16,9 +16,9 @@ export function StatusBadge({
 
   return (
     <span
-      className={`inline-flex h-7 shrink-0 items-center border border-[#26231d] px-2 font-black ${
+      className={`inline-flex h-7 shrink-0 items-center rounded-md border px-2 font-mono font-black tabular-nums ${
         large ? "text-sm" : "text-xs"
-      } ${node.status === "online" ? "bg-[#14724d] text-white" : "bg-white text-[#171714]"}`}
+      } ${node.status === "online" ? "border-[#14724d] bg-[#14724d] text-white" : "border-[#d8cdbb] bg-white text-[#171714]"}`}
     >
       {text}
     </span>

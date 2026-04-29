@@ -207,7 +207,10 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f4ed] pb-24 text-[#171714] lg:pb-6">
+    <main className="page-shell min-h-screen overflow-x-hidden pb-24 text-[#171714] lg:pb-6">
+      <a className="skip-link" href="#main-content">
+        跳到节点列表
+      </a>
       <TopBar
         busy={busy}
         password={password}
@@ -216,7 +219,10 @@ export default function Home() {
         onPasswordChange={setPassword}
       />
 
-      <section className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-4 lg:grid-cols-[minmax(360px,460px)_minmax(0,1fr)] lg:px-6">
+      <section
+        className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-4 lg:grid-cols-[minmax(360px,460px)_minmax(0,1fr)] lg:px-6"
+        id="main-content"
+      >
         <div className="grid gap-4 lg:min-h-0">
           <SubscriptionControls
             busy={busy}

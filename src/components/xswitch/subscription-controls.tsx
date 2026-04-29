@@ -14,33 +14,37 @@ export function SubscriptionControls({
   onRefresh: () => void;
 }) {
   return (
-    <section className="border border-[#26231d] bg-[#fffdf7]">
-      <div className="grid gap-3 p-3">
-        <label className="grid gap-1">
-          <span className="text-xs font-black uppercase tracking-[0.14em] text-[#736b5f]">
+    <section className="panel">
+      <div className="grid gap-3 p-4">
+        <label className="grid gap-1" htmlFor="subscription-url">
+          <span className="label-kicker">
             Subscription
           </span>
           <textarea
-            className="min-h-16 resize-y border border-[#26231d] bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-[#d64b2a]"
-            placeholder="https://..."
+            autoComplete="off"
+            className="control-input min-h-20 resize-y"
+            id="subscription-url"
+            name="subscription-url"
+            placeholder="https://example.com/sub…"
+            spellCheck={false}
             value={subscriptionUrl}
             onChange={(event) => onSubscriptionChange(event.target.value)}
           />
         </label>
         <div className="grid grid-cols-2 gap-2">
           <button
-            className="border border-[#26231d] bg-white px-3 py-2 text-sm font-black disabled:opacity-50"
+            className="btn btn-secondary"
             disabled={busy !== null}
             onClick={onSave}
           >
-            保存
+            {busy === "save" ? "保存中…" : "保存订阅"}
           </button>
           <button
-            className="border border-[#26231d] bg-[#d64b2a] px-3 py-2 text-sm font-black text-white disabled:opacity-50"
+            className="btn btn-primary"
             disabled={busy !== null}
             onClick={onRefresh}
           >
-            {busy === "refresh" ? "刷新中" : "刷新订阅"}
+            {busy === "refresh" ? "刷新中…" : "刷新节点"}
           </button>
         </div>
       </div>

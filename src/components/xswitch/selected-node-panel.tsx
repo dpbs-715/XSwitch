@@ -19,15 +19,15 @@ export function SelectedNodePanel({
 }) {
   return (
     <aside className="grid gap-4 lg:sticky lg:top-[116px] lg:self-start">
-      <section className="border-2 border-[#26231d] bg-white shadow-[6px_6px_0_#26231d]">
+      <section className="panel border-[#26231d] bg-white shadow-[6px_6px_0_rgba(38,35,29,0.14)]">
         {node ? (
           <div className="grid gap-4 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#736b5f]">
+                <p className="label-kicker">
                   Selected
                 </p>
-                <h2 className="mt-2 text-2xl font-black leading-tight text-[#171714]">
+                <h2 className="mt-2 break-words text-2xl font-black leading-tight text-[#171714] text-pretty">
                   {node.name}
                 </h2>
               </div>
@@ -43,32 +43,32 @@ export function SelectedNodePanel({
 
             <div className="grid grid-cols-2 gap-2">
               <button
-                className="border border-[#26231d] bg-white px-4 py-3 text-sm font-black disabled:opacity-50"
+                className="btn btn-secondary px-4 py-3"
                 disabled={busy !== null}
                 onClick={() => onTestNode(node.id)}
               >
-                {busy === `test-${node.id}` ? "检测中" : "检测此节点"}
+                {busy === `test-${node.id}` ? "检测中…" : "检测节点"}
               </button>
               <button
-                className="border border-[#26231d] bg-[#d64b2a] px-4 py-3 text-sm font-black text-white disabled:opacity-50"
+                className="btn btn-primary px-4 py-3"
                 disabled={busy !== null}
                 onClick={onSwitchNode}
               >
-                {busy === "switch" ? "切换中" : "使用此节点"}
+                {busy === "switch" ? "切换中…" : "使用节点"}
               </button>
             </div>
           </div>
         ) : (
           <div className="grid min-h-72 place-items-center p-6 text-center">
-            <p className="max-w-sm text-lg font-black">
+            <p className="max-w-sm text-lg font-black text-[#4c463d] text-pretty">
               保存订阅并刷新后，选择一个节点即可切换。
             </p>
           </div>
         )}
       </section>
 
-      <section className="border border-[#26231d] bg-[#fffdf7] p-4">
-        <h3 className="text-sm font-black uppercase tracking-[0.14em] text-[#736b5f]">
+      <section className="panel-muted p-4">
+        <h3 className="label-kicker">
           Server
         </h3>
         <div className="mt-3 grid gap-2 text-sm">

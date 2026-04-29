@@ -22,10 +22,10 @@ export function toErrorToast(error: unknown): Toast {
 
 export function toastClassName(tone: Toast["tone"]) {
   if (tone === "ok") {
-    return "border-[#1d7a55] bg-[#edf8f1] text-[#145b3f]";
+    return "border-[#98d1b8] bg-[#edf8f1] text-[#145b3f]";
   }
   if (tone === "error") {
-    return "border-[#b42318] bg-[#fff0ed] text-[#8a1b12]";
+    return "border-[#f0a196] bg-[#fff0ed] text-[#8a1b12]";
   }
-  return "border-[#26231d] bg-white text-[#171714]";
+  return "border-[#d8cdbb] bg-white text-[#4c463d]";
 }
