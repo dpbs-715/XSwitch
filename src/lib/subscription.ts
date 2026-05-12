@@ -77,7 +77,7 @@ export function parseSubscription(content: string): SubscriptionNode[] {
 
 export function toXrayOutbound(node: SubscriptionNode, tag: string) {
   const config = node.config;
-  const streamSettings = buildStreamSettings(config);
+  const streamSettings = buildStreamSettings(config, node.protocol);
 
   if (node.protocol === "vmess") {
     return compactObject({
@@ -476,8 +476,8 @@ function parseGenericProxyUrl(
       password:
         protocol === "trojan" ? decodeURIComponent(url.username) : undefined,
       network: params.type ?? "tcp",
-      tls: params.security,
-      sni: params.sni,
+      tls: params.security ?? (protocol === "trojan" ? "tls" : undefined),
+      sni: params.sni ?? params.peer,
       host: params.host,
       path: params.path,
     },
@@ -527,12 +527,18 @@ function parseShadowsocks(raw: string): ParsedUrlNode {
   };
 }
 
-function buildStreamSettings(config: Record<string, unknown>) {
+function buildStreamSettings(
+  config: Record<string, unknown>,
+  protocol: ProxyProtocol,
+) {
   const network = stringValue(config.network) || "tcp";
-  const security = stringValue(config.tls);
-  const sni = stringValue(config.sni);
+  const security =
+    stringValue(config.tls) || (protocol === "trojan" ? "tls" : "");
+  const sni = stringValue(config.sni) || stringValue(config.peer);
   const host = stringValue(config.host);
   const requestPath = stringValue(config.path);
+  const allowInsecure = booleanValue(config.allowInsecure);
+  const tcpFastOpen = booleanValue(config.tfo);
 
   return compactObject({
     network,
@@ -541,6 +547,7 @@ function buildStreamSettings(config: Record<string, unknown>) {
       security === "tls"
         ? compactObject({
             serverName: sni || host,
+            allowInsecure,
           })
         : undefined,
     realitySettings:
@@ -565,6 +572,11 @@ function buildStreamSettings(config: Record<string, unknown>) {
             serviceName: config.serviceName,
           })
         : undefined,
+    sockopt: tcpFastOpen
+      ? {
+          tcpFastOpen,
+        }
+      : undefined,
   });
 }
 
@@ -669,6 +681,17 @@ function numberValue(value: unknown, fallback?: number) {
     return fallback;
   }
   throw new Error("节点端口无效");
+}
+
+function booleanValue(value: unknown) {
+  if (value === true) {
+    return true;
+  }
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  return /^(1|true|yes)$/i.test(value) ? true : undefined;
 }
 
 function compactObject<T extends Record<string, unknown>>(value: T): T {
