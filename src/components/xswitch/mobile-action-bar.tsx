@@ -5,11 +5,13 @@ import type { BusyState } from "./ui-types";
 export function MobileActionBar({
   node,
   busy,
+  currentNodeId,
   onTestNode,
   onSwitchNode,
 }: {
   node: SubscriptionNode | undefined;
   busy: BusyState;
+  currentNodeId: string | null;
   onTestNode: (id: string) => void;
   onSwitchNode: () => void;
 }) {
@@ -23,6 +25,7 @@ export function MobileActionBar({
         <div className="min-w-0">
           <div className="truncate text-sm font-black">{node.name}</div>
           <div className="truncate font-mono text-xs text-[#655e54]">
+            {node.id === currentNodeId ? "使用中 · " : ""}
             {node.protocol.toUpperCase()} · {node.region}
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { CurrentConnectionCard } from "@/components/xswitch/current-connection-card";
 import { MetricsStrip } from "@/components/xswitch/metrics-strip";
 import { MobileActionBar } from "@/components/xswitch/mobile-action-bar";
 import { NodeList } from "@/components/xswitch/node-list";
@@ -18,6 +19,7 @@ import type {
 import type {
   ApiResult,
   AppSettings,
+  CurrentConnection,
   NodeCache,
   SubscriptionNode,
 } from "@/lib/types";
@@ -26,6 +28,8 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [subscriptionUrl, setSubscriptionUrl] = useState("");
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [currentConnection, setCurrentConnection] =
+    useState<CurrentConnection | null>(null);
   const [nodes, setNodes] = useState<SubscriptionNode[]>([]);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -58,6 +62,8 @@ export default function Home() {
 
   const onlineCount = nodes.filter((node) => node.status === "online").length;
   const offlineCount = nodes.filter((node) => node.status === "offline").length;
+  const currentNodeId =
+    currentConnection?.state === "matched" ? currentConnection.node.id : null;
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -97,6 +103,7 @@ export default function Home() {
         throw new Error(payload.error);
       }
       setSettings(payload.data.settings);
+      setCurrentConnection(payload.data.currentConnection);
       setSubscriptionUrl(payload.data.subscriptionUrl ?? "");
       setUpdatedAt(payload.data.updatedAt);
       setToast({
@@ -171,6 +178,36 @@ export default function Home() {
       setNodes(payload.nodes);
       setUpdatedAt(payload.updatedAt);
       setToast({ tone: "ok", message: id ? "节点检测完成。" : "批量检测完成。" });
+      if (!id || id === currentNodeId) {
+        await loadStatus();
+      }
+    });
+  }
+
+  async function testCurrentConnection() {
+    await runBusy("test-current", async () => {
+      const payload = await api<{
+        currentConnection: CurrentConnection;
+        nodes: SubscriptionNode[];
+        updatedAt: string | null;
+      }>("/api/test", {
+        method: "POST",
+        body: JSON.stringify({ current: true }),
+      });
+      setCurrentConnection(payload.currentConnection);
+      setNodes(payload.nodes);
+      setUpdatedAt(payload.updatedAt);
+      setToast({ tone: "ok", message: "当前连接检测完成。" });
+    });
+  }
+
+  function locateCurrentNode(id: string) {
+    setSelectedId(id);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`node-${id}`)?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      });
     });
   }
 
@@ -192,6 +229,7 @@ export default function Home() {
         tone: "ok",
         message: `已切换 ${selectedNode.name}，备份：${payload.backupPath}`,
       });
+      await loadStatus();
     });
   }
 
@@ -235,6 +273,7 @@ export default function Home() {
           <NodeList
             busy={busy}
             nodes={filteredNodes}
+            currentNodeId={currentNodeId}
             protocol={protocol}
             query={query}
             selectedId={selectedNode?.id ?? null}
@@ -254,8 +293,16 @@ export default function Home() {
             updatedAt={updatedAt}
           />
 
+          <CurrentConnectionCard
+            busy={busy}
+            currentConnection={currentConnection}
+            onLocateNode={locateCurrentNode}
+            onTestCurrent={testCurrentConnection}
+          />
+
           <SelectedNodePanel
             busy={busy}
+            currentNodeId={currentNodeId}
             node={selectedNode}
             settings={settings}
             onSwitchNode={switchNode}
@@ -266,6 +313,7 @@ export default function Home() {
 
       <MobileActionBar
         busy={busy}
+        currentNodeId={currentNodeId}
         node={selectedNode}
         onSwitchNode={switchNode}
         onTestNode={(id) => testNodes(id)}

@@ -1,4 +1,4 @@
-import type { AppSettings } from "@/lib/types";
+import type { AppSettings, CurrentConnection } from "@/lib/types";
 
 export type Toast = {
   tone: "ok" | "error" | "info";
@@ -9,6 +9,7 @@ export type StatusPayload = {
   settings: AppSettings;
   hasSubscription: boolean;
   subscriptionUrl: string | null;
+  currentConnection: CurrentConnection;
   nodeCount: number;
   updatedAt: string | null;
 };

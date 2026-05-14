@@ -20,6 +20,44 @@ export type NodeCache = {
   nodes: SubscriptionNode[];
 };
 
+export type OutboundSummary = {
+  tag: string;
+  protocol: ProxyProtocol;
+  address: string;
+  port: number;
+  network?: string;
+  security?: string;
+  auth?: Record<string, string>;
+};
+
+export type CurrentConnectionHealth = {
+  status: NodeStatus;
+  latencyMs?: number;
+  checkedAt?: string;
+};
+
+export type CurrentConnection =
+  | {
+      state: "matched";
+      node: SubscriptionNode;
+      outbound: OutboundSummary;
+      health?: CurrentConnectionHealth;
+    }
+  | {
+      state: "unmatched";
+      outbound: OutboundSummary;
+      health?: CurrentConnectionHealth;
+    }
+  | {
+      state: "missing-outbound";
+      outboundTag: string;
+    }
+  | {
+      state: "config-error";
+      outboundTag: string;
+      error: string;
+    };
+
 export type AppSettings = {
   dataDir: string;
   xrayConfigPath: string;

@@ -1,9 +1,9 @@
 import net from "node:net";
 
-import type { SubscriptionNode } from "./types";
+import type { OutboundSummary, SubscriptionNode } from "./types";
 
 export async function testTcpLatency(
-  node: SubscriptionNode,
+  node: Pick<SubscriptionNode | OutboundSummary, "address" | "port">,
   timeoutMs = 5000,
 ): Promise<{ latencyMs?: number; status: "online" | "offline" }> {
   const startedAt = performance.now();

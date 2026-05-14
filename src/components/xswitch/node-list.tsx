@@ -11,6 +11,7 @@ export function NodeList({
   query,
   protocol,
   selectedId,
+  currentNodeId,
   busy,
   onQueryChange,
   onProtocolChange,
@@ -22,6 +23,7 @@ export function NodeList({
   query: string;
   protocol: ProtocolFilter;
   selectedId: string | null;
+  currentNodeId: string | null;
   busy: BusyState;
   onQueryChange: (value: string) => void;
   onProtocolChange: (value: ProtocolFilter) => void;
@@ -86,6 +88,7 @@ export function NodeList({
         ) : (
           nodes.map((node) => (
             <button
+              id={`node-${node.id}`}
               className={`node-row [content-visibility:auto] ${
                 selectedId === node.id ? "node-row-active" : "bg-[#fffdf7]"
               }`}
@@ -93,7 +96,16 @@ export function NodeList({
               onClick={() => onSelect(node.id)}
             >
               <span className="min-w-0">
-                <span className="block truncate text-sm font-black">{node.name}</span>
+                <span className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="block min-w-0 truncate text-sm font-black">
+                    {node.name}
+                  </span>
+                  {currentNodeId === node.id ? (
+                    <span className="inline-flex h-6 shrink-0 items-center rounded-md border border-[#14724d] bg-[#edf8f1] px-2 text-[11px] font-black text-[#145b3f]">
+                      使用中
+                    </span>
+                  ) : null}
+                </span>
                 <span className="mt-1 block truncate font-mono text-xs text-[#655e54]">
                   {node.protocol.toUpperCase()} · {node.region} · {node.address}:{node.port}
                 </span>

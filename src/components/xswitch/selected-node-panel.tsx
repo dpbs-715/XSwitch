@@ -8,15 +8,19 @@ export function SelectedNodePanel({
   node,
   settings,
   busy,
+  currentNodeId,
   onTestNode,
   onSwitchNode,
 }: {
   node: SubscriptionNode | undefined;
   settings: AppSettings | null;
   busy: BusyState;
+  currentNodeId: string | null;
   onTestNode: (id: string) => void;
   onSwitchNode: () => void;
 }) {
+  const isCurrentNode = Boolean(node && node.id === currentNodeId);
+
   return (
     <aside className="grid gap-4 lg:sticky lg:top-[116px] lg:self-start">
       <section className="panel border-[#26231d] bg-white shadow-[6px_6px_0_rgba(38,35,29,0.14)]">
@@ -25,11 +29,18 @@ export function SelectedNodePanel({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="label-kicker">
-                  Selected
+                  选中节点
                 </p>
-                <h2 className="mt-2 break-words text-2xl font-black leading-tight text-[#171714] text-pretty">
-                  {node.name}
-                </h2>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <h2 className="break-words text-2xl font-black leading-tight text-[#171714] text-pretty">
+                    {node.name}
+                  </h2>
+                  {isCurrentNode ? (
+                    <span className="inline-flex h-7 items-center rounded-md border border-[#14724d] bg-[#edf8f1] px-2 text-xs font-black text-[#145b3f]">
+                      正在使用
+                    </span>
+                  ) : null}
+                </div>
               </div>
               <StatusBadge node={node} large />
             </div>
