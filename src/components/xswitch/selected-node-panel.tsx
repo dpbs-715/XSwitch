@@ -22,8 +22,8 @@ export function SelectedNodePanel({
   const isCurrentNode = Boolean(node && node.id === currentNodeId);
 
   return (
-    <aside className="grid gap-4 lg:sticky lg:top-[116px] lg:self-start">
-      <section className="panel border-[#26231d] bg-white shadow-[6px_6px_0_rgba(38,35,29,0.14)]">
+    <aside className="grid gap-3">
+      <section className="panel panel-secondary border-[#d8cdbb] bg-white">
         {node ? (
           <div className="grid gap-4 p-4">
             <div className="flex items-start justify-between gap-3">
@@ -78,10 +78,8 @@ export function SelectedNodePanel({
         )}
       </section>
 
-      <section className="panel-muted p-4">
-        <h3 className="label-kicker">
-          Server
-        </h3>
+      <section className="panel-muted server-meta p-3.5">
+        <h3 className="label-kicker">服务器</h3>
         <div className="mt-3 grid gap-2 text-sm">
           <Detail label="配置文件" value={settings?.xrayConfigPath ?? "-"} />
           <Detail label="Outbound Tag" value={settings?.outboundTag ?? "-"} />

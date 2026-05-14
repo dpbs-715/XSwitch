@@ -31,9 +31,26 @@ export function NodeList({
   onTestAll: () => void;
 }) {
   return (
-    <section className="panel flex min-h-[560px] flex-col overflow-hidden lg:h-[calc(100vh-250px)] lg:min-h-0">
-      <div className="grid gap-3 border-b border-[#e3d6c3] bg-[#fffaf2] p-4">
-        <div className="grid grid-cols-[1fr_auto] gap-2">
+    <section className="panel node-pool flex min-h-[600px] flex-col overflow-hidden lg:h-[calc(100vh-230px)] lg:min-h-0">
+      <div className="grid gap-3 border-b border-[#ded0bc] bg-[#fffaf2] p-3.5">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-black leading-none text-[#171714]">
+              节点池
+            </h2>
+            <p className="mt-1 font-mono text-xs font-bold tabular-nums text-[#6f675c]">
+              {nodes.length} / {totalCount} nodes
+            </p>
+          </div>
+          <button
+            className="btn btn-secondary min-h-9 px-3 text-xs"
+            disabled={busy !== null || totalCount === 0}
+            onClick={onTestAll}
+          >
+            {busy === "test-all" ? "检测中…" : "检测全部"}
+          </button>
+        </div>
+        <div>
           <label className="sr-only" htmlFor="node-search">
             搜索节点
           </label>
@@ -47,13 +64,6 @@ export function NodeList({
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
           />
-          <button
-            className="btn btn-secondary px-3 text-xs"
-            disabled={busy !== null || totalCount === 0}
-            onClick={onTestAll}
-          >
-            {busy === "test-all" ? "检测中…" : "检测全部"}
-          </button>
         </div>
 
         <div className="grid grid-cols-5 gap-1">
@@ -73,9 +83,6 @@ export function NodeList({
           ))}
         </div>
 
-        <div className="font-mono text-xs font-bold tabular-nums text-[#5e574d]">
-          {nodes.length} / {totalCount} 节点
-        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">

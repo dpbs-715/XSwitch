@@ -12,7 +12,7 @@ export function MetricsStrip({
   updatedAt: string | null;
 }) {
   return (
-    <div className="grid grid-cols-2 overflow-hidden rounded-md border border-[#26231d] bg-[#26231d] text-white shadow-[var(--shadow)] sm:grid-cols-4">
+    <div className="grid grid-cols-4 overflow-hidden rounded-md border border-[#d8cdbb] bg-[#fffaf2] text-[#171714]">
       <Metric label="节点总数" value={String(nodeCount)} />
       <Metric label="在线" value={String(onlineCount)} />
       <Metric label="离线" value={String(offlineCount)} />
@@ -23,11 +23,13 @@ export function MetricsStrip({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 border-b border-r border-[#4b463c] p-3 last:border-r-0 sm:border-b-0">
-      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#d8cdbb]">
+    <div className="min-w-0 border-r border-[#e3d6c3] p-2.5 last:border-r-0">
+      <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6f675c]">
         {label}
       </div>
-      <div className="mt-1 truncate font-mono text-xl font-black tabular-nums">{value}</div>
+      <div className="mt-1 truncate font-mono text-base font-black tabular-nums sm:text-lg">
+        {value}
+      </div>
     </div>
   );
 }

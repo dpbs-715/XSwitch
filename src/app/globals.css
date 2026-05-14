@@ -13,6 +13,7 @@
   --accent-dark: #a7381f;
   --ok: #14724d;
   --shadow: 0 18px 45px rgba(58, 44, 25, 0.1);
+  --shadow-soft: 0 10px 26px rgba(58, 44, 25, 0.07);
 }
 
 @theme inline {
@@ -57,13 +58,28 @@ button:disabled {
 
   .page-shell {
     background:
-      radial-gradient(circle at top left, rgba(214, 75, 42, 0.12), transparent 30rem),
+      linear-gradient(rgba(45, 41, 34, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45, 41, 34, 0.035) 1px, transparent 1px),
+      radial-gradient(circle at top left, rgba(214, 75, 42, 0.1), transparent 28rem),
       linear-gradient(180deg, #fbf7ef 0%, #f2eadc 100%);
+    background-size:
+      32px 32px,
+      32px 32px,
+      auto,
+      auto;
   }
 
   .panel {
-    @apply border bg-[var(--surface)] shadow-[var(--shadow)];
+    @apply border bg-[var(--surface)] shadow-[var(--shadow-soft)];
     border-color: var(--line);
+  }
+
+  .panel-quiet {
+    @apply bg-[#fffaf2]/95;
+  }
+
+  .panel-secondary {
+    @apply shadow-[0_8px_22px_rgba(58,44,25,0.06)];
   }
 
   .panel-muted {
@@ -94,12 +110,32 @@ button:disabled {
   }
 
   .node-row {
-    @apply grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 border-b p-3 text-left transition-[background-color,box-shadow] hover:bg-[#fff5e7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[rgba(214,75,42,0.24)];
+    @apply grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 border-b px-3 py-2.5 text-left transition-[background-color,box-shadow,transform] hover:bg-[#fff5e7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[rgba(214,75,42,0.24)];
     border-color: #eadfce;
   }
 
   .node-row-active {
     @apply bg-[#f8ead7] shadow-[inset_4px_0_0_var(--accent)];
+  }
+
+  .node-pool {
+    box-shadow: 0 16px 38px rgba(58, 44, 25, 0.08);
+  }
+
+  .panel-current {
+    position: relative;
+  }
+
+  .panel-current::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: linear-gradient(180deg, #70d3aa, #d64b2a);
+  }
+
+  .server-meta {
+    box-shadow: none;
   }
 
   .mobile-safe-bar {

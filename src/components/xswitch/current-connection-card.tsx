@@ -23,8 +23,8 @@ export function CurrentConnectionCard({
   const badge = getStateBadge(currentConnection);
 
   return (
-    <section className="panel-current overflow-hidden border-[#26231d] bg-[#171714] text-white shadow-[8px_8px_0_rgba(38,35,29,0.18)]">
-      <div className="grid gap-4 p-4">
+    <section className="panel-current overflow-hidden border-[#26231d] bg-[#171714] text-white shadow-[0_22px_55px_rgba(28,24,18,0.22)]">
+      <div className="grid gap-4 p-4.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f1b29d]">
@@ -33,6 +33,9 @@ export function CurrentConnectionCard({
             <h2 className="mt-2 break-words text-2xl font-black leading-tight text-pretty">
               {title}
             </h2>
+            <p className="mt-2 truncate font-mono text-xs font-bold text-[#c7bdae]">
+              {endpoint}
+            </p>
           </div>
           <span
             className={`inline-flex h-7 shrink-0 items-center rounded-md border px-2 text-xs font-black ${
@@ -47,7 +50,7 @@ export function CurrentConnectionCard({
           </span>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           <DarkDetail label="端点" value={endpoint} />
           <DarkDetail label="健康" value={formatHealth(health)} />
           <DarkDetail label="最近检测" value={formatDate(health?.checkedAt ?? null)} />

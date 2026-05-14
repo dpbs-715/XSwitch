@@ -258,7 +258,7 @@ export default function Home() {
       />
 
       <section
-        className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-4 lg:grid-cols-[minmax(360px,460px)_minmax(0,1fr)] lg:px-6"
+        className="mx-auto grid w-full max-w-[1500px] gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,500px)] lg:items-start lg:px-6"
         id="main-content"
       >
         <div className="grid gap-4 lg:min-h-0">
@@ -285,19 +285,19 @@ export default function Home() {
           />
         </div>
 
-        <div className="grid gap-4">
-          <MetricsStrip
-            nodeCount={nodes.length}
-            offlineCount={offlineCount}
-            onlineCount={onlineCount}
-            updatedAt={updatedAt}
-          />
-
+        <div className="grid gap-3 lg:sticky lg:top-[92px]">
           <CurrentConnectionCard
             busy={busy}
             currentConnection={currentConnection}
             onLocateNode={locateCurrentNode}
             onTestCurrent={testCurrentConnection}
+          />
+
+          <MetricsStrip
+            nodeCount={nodes.length}
+            offlineCount={offlineCount}
+            onlineCount={onlineCount}
+            updatedAt={updatedAt}
           />
 
           <SelectedNodePanel
