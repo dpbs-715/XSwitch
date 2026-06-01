@@ -41,7 +41,7 @@ const { parseSubscription, toXrayOutbound } = loadSubscriptionModule();
 
 test("trojan peer URL parameters become Xray TLS stream settings", () => {
   const [node] = parseSubscription(
-    "trojan://d75db755-14df-474b-a883-c6fa0d1c3587@Hkdcrtc-e.catcat321.com:20001?allowInsecure=1&peer=kr.catxstar.com&tfo=1#%F0%9F%87%B0%F0%9F%87%B7%7C%E9%9F%A9%E5%9B%BD%E5%AE%B6%E5%AE%BD-IEPL%2002",
+    "trojan://test-trojan-password@trojan.example.com:20001?allowInsecure=1&peer=tls-peer.example.com&tfo=1&pinnedPeerCertSha256=abc123#Trojan",
   );
 
   const outbound = toXrayOutbound(node, "proxy");
@@ -50,8 +50,8 @@ test("trojan peer URL parameters become Xray TLS stream settings", () => {
     network: "tcp",
     security: "tls",
     tlsSettings: {
-      serverName: "kr.catxstar.com",
-      allowInsecure: true,
+      serverName: "tls-peer.example.com",
+      pinnedPeerCertSha256: ["abc123"],
     },
     sockopt: {
       tcpFastOpen: true,
@@ -65,16 +65,17 @@ test("cached trojan peer parameters still become Xray TLS stream settings", () =
       id: "cached-node",
       name: "cached trojan",
       protocol: "trojan",
-      address: "oplosgru-c.catcat321.com",
+      address: "cached-trojan.example.com",
       port: 20059,
       region: "韩国",
       status: "unknown",
       raw: "",
       config: {
-        password: "d75db755-14df-474b-a883-c6fa0d1c3587",
+        password: "test-trojan-password",
         network: "tcp",
-        peer: "kr.catxstar.com",
+        peer: "tls-peer.example.com",
         allowInsecure: "1",
+        pinnedPeerCertSha256: "abc123,def456",
         tfo: "1",
       },
     },
@@ -85,11 +86,74 @@ test("cached trojan peer parameters still become Xray TLS stream settings", () =
     network: "tcp",
     security: "tls",
     tlsSettings: {
-      serverName: "kr.catxstar.com",
-      allowInsecure: true,
+      serverName: "tls-peer.example.com",
+      pinnedPeerCertSha256: ["abc123", "def456"],
     },
     sockopt: {
       tcpFastOpen: true,
+    },
+  });
+});
+
+test("vless reality URL parameters become Xray reality settings", () => {
+  const [node] = parseSubscription(
+    "vless://00000000-0000-4000-8000-000000000001@reality.example.com:443?encryption=none&flow=xtls-rprx-vision&security=reality&sni=reality-peer.example.com&fp=chrome&pbk=test-public-key&sid=0123abcd&spx=%2Fsearch%3Fq%3Dxswitch&type=tcp#Reality",
+  );
+
+  const outbound = toXrayOutbound(node, "proxy");
+
+  assert.deepEqual(JSON.parse(JSON.stringify(outbound)), {
+    tag: "proxy",
+    protocol: "vless",
+    settings: {
+      vnext: [
+        {
+          address: "reality.example.com",
+          port: 443,
+          users: [
+            {
+              id: "00000000-0000-4000-8000-000000000001",
+              encryption: "none",
+              flow: "xtls-rprx-vision",
+            },
+          ],
+        },
+      ],
+    },
+    streamSettings: {
+      network: "tcp",
+      security: "reality",
+      realitySettings: {
+        serverName: "reality-peer.example.com",
+        publicKey: "test-public-key",
+        shortId: "0123abcd",
+        fingerprint: "chrome",
+        spiderX: "/search?q=xswitch",
+      },
+    },
+  });
+});
+
+test("vless TLS URL keeps client fingerprint and ALPN", () => {
+  const [node] = parseSubscription(
+    "vless://00000000-0000-4000-8000-000000000001@tls.example.com:443?encryption=none&security=tls&sni=edge.example.com&fp=chrome&alpn=h2%2Chttp%2F1.1&type=ws&host=edge.example.com&path=%2Fws#TLS",
+  );
+
+  const outbound = toXrayOutbound(node, "proxy");
+
+  assert.deepEqual(JSON.parse(JSON.stringify(outbound.streamSettings)), {
+    network: "ws",
+    security: "tls",
+    tlsSettings: {
+      serverName: "edge.example.com",
+      alpn: ["h2", "http/1.1"],
+      fingerprint: "chrome",
+    },
+    wsSettings: {
+      path: "/ws",
+      headers: {
+        Host: "edge.example.com",
+      },
     },
   });
 });

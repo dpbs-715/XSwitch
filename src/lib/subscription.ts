@@ -313,6 +313,8 @@ function clashProxyToParsedNode(
         sni: proxy.servername,
         host: proxy.host,
         path: proxy.path,
+        fingerprint: proxy["client-fingerprint"] ?? proxy.fingerprint,
+        alpn: proxy.alpn,
       },
     };
   }
@@ -332,6 +334,11 @@ function clashProxyToParsedNode(
         sni: proxy.servername,
         host: proxy.host,
         path: proxy.path,
+        fingerprint: proxy["client-fingerprint"] ?? proxy.fingerprint,
+        alpn: proxy.alpn,
+        publicKey: proxy["public-key"] ?? proxy.publicKey ?? proxy.pbk,
+        shortId: proxy["short-id"] ?? proxy.shortId ?? proxy.sid,
+        spiderX: proxy.spiderX ?? proxy.spx,
       },
     };
   }
@@ -347,6 +354,10 @@ function clashProxyToParsedNode(
         network: proxy.network ?? "tcp",
         tls: "tls",
         sni: proxy.sni ?? proxy.servername,
+        fingerprint: proxy["client-fingerprint"] ?? proxy.fingerprint,
+        alpn: proxy.alpn,
+        pinnedPeerCertSha256:
+          proxy["pinned-peer-cert-sha256"] ?? proxy.pinnedPeerCertSha256,
       },
     };
   }
@@ -452,6 +463,8 @@ function parseVmess(raw: string): ParsedUrlNode {
       host: stringValue(data.host),
       path: stringValue(data.path),
       type: stringValue(data.type),
+      fingerprint: stringValue(data.fp) || stringValue(data.fingerprint),
+      alpn: data.alpn,
     },
   };
 }
@@ -477,9 +490,17 @@ function parseGenericProxyUrl(
         protocol === "trojan" ? decodeURIComponent(url.username) : undefined,
       network: params.type ?? "tcp",
       tls: params.security ?? (protocol === "trojan" ? "tls" : undefined),
-      sni: params.sni ?? params.peer,
-      host: params.host,
+      sni: params.sni ?? params.peer ?? params.serverName ?? params.servername,
+      host: params.host ?? params.authority,
       path: params.path,
+      fingerprint: params.fp ?? params.fingerprint,
+      alpn: params.alpn,
+      publicKey: params.pbk ?? params.publicKey,
+      shortId: params.sid ?? params.shortId,
+      spiderX: params.spx ?? params.spiderX,
+      serviceName: params.serviceName,
+      authority: params.authority ?? params.host,
+      pinnedPeerCertSha256: params.pinnedPeerCertSha256,
     },
   };
 }
@@ -537,8 +558,20 @@ function buildStreamSettings(
   const sni = stringValue(config.sni) || stringValue(config.peer);
   const host = stringValue(config.host);
   const requestPath = stringValue(config.path);
-  const allowInsecure = booleanValue(config.allowInsecure);
   const tcpFastOpen = booleanValue(config.tfo);
+  const fingerprint =
+    stringValue(config.fingerprint) || stringValue(config.fp);
+  const alpn = stringArrayValue(config.alpn);
+  const pinnedPeerCertSha256 = stringArrayValue(
+    config.pinnedPeerCertSha256,
+  );
+  const publicKey =
+    stringValue(config.publicKey) || stringValue(config.pbk);
+  const shortId = stringValue(config.shortId) || stringValue(config.sid);
+  const spiderX = stringValue(config.spiderX) || stringValue(config.spx);
+  const grpcServiceName =
+    stringValue(config.serviceName) || stringValue(config["grpc-service-name"]);
+  const grpcAuthority = stringValue(config.authority) || host;
 
   return compactObject({
     network,
@@ -547,16 +580,19 @@ function buildStreamSettings(
       security === "tls"
         ? compactObject({
             serverName: sni || host,
-            allowInsecure,
+            pinnedPeerCertSha256,
+            alpn,
+            fingerprint,
           })
         : undefined,
     realitySettings:
       security === "reality"
         ? compactObject({
             serverName: sni || host,
-            publicKey: config.pbk,
-            shortId: config.sid,
-            fingerprint: config.fp,
+            publicKey,
+            shortId,
+            fingerprint,
+            spiderX,
           })
         : undefined,
     wsSettings:
@@ -569,7 +605,8 @@ function buildStreamSettings(
     grpcSettings:
       network === "grpc"
         ? compactObject({
-            serviceName: config.serviceName,
+            serviceName: grpcServiceName,
+            authority: grpcAuthority,
           })
         : undefined,
     sockopt: tcpFastOpen
@@ -692,6 +729,24 @@ function booleanValue(value: unknown) {
   }
 
   return /^(1|true|yes)$/i.test(value) ? true : undefined;
+}
+
+function stringArrayValue(value: unknown) {
+  if (Array.isArray(value)) {
+    const entries = value.filter((entry): entry is string => Boolean(entry));
+    return entries.length ? entries : undefined;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const entries = value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  return entries.length ? entries : undefined;
 }
 
 function compactObject<T extends Record<string, unknown>>(value: T): T {
