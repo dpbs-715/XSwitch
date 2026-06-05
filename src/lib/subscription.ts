@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 
+import { ProxyAgent } from "undici";
+
 import type { ProxyProtocol, SubscriptionNode } from "./types";
 
 type ParsedUrlNode = {
@@ -18,8 +20,15 @@ const subscriptionUserAgents = [
   "xswitch/0.1",
 ] as const;
 
+const subscriptionFetchTimeoutMs = 12_000;
+const subscriptionProxyEnvVar = "XSWITCH_SUBSCRIPTION_PROXY";
+
 const informationNodePattern =
   /剩余流量|套餐到期|到期时间|官网|官方|流量|直连地址|更换客户端|邀请|返佣|https?:\/\/|bit\.ly|expire|traffic|subscription|status/i;
+
+type SubscriptionFetchInit = RequestInit & {
+  dispatcher?: ProxyAgent;
+};
 
 export async function fetchSubscription(url: string): Promise<string> {
   const errors: string[] = [];
@@ -27,12 +36,7 @@ export async function fetchSubscription(url: string): Promise<string> {
   for (const userAgent of subscriptionUserAgents) {
     try {
       const response = await fetch(url, {
-        headers: {
-          accept: "*/*",
-          "user-agent": userAgent,
-        },
-        cache: "no-store",
-        signal: AbortSignal.timeout(12_000),
+        ...buildSubscriptionFetchInit(url, userAgent),
       });
 
       if (!response.ok) {
@@ -47,11 +51,60 @@ export async function fetchSubscription(url: string): Promise<string> {
 
       errors.push(`${userAgent}: ${content.trim() ? "非订阅内容" : "空内容"}`);
     } catch (error) {
-      errors.push(`${userAgent}: ${formatFetchError(error)}`);
+      errors.push(`${userAgent}: ${formatFetchError(error)}${proxySuffix(url)}`);
     }
   }
 
   throw new Error(`订阅拉取失败：${errors.join("；")}`);
+}
+
+function buildSubscriptionFetchInit(
+  url: string,
+  userAgent: string,
+): SubscriptionFetchInit {
+  const proxyUrl = subscriptionProxyUrl(url);
+  const init: SubscriptionFetchInit = {
+    headers: {
+      accept: "*/*",
+      "user-agent": userAgent,
+    },
+    cache: "no-store",
+    signal: AbortSignal.timeout(subscriptionFetchTimeoutMs),
+  };
+
+  if (proxyUrl) {
+    init.dispatcher = new ProxyAgent(proxyUrl);
+  }
+
+  return init;
+}
+
+function subscriptionProxyUrl(url: string) {
+  return (
+    stringValue(process.env[subscriptionProxyEnvVar]) ||
+    protocolProxyUrl(url) ||
+    stringValue(process.env.ALL_PROXY) ||
+    stringValue(process.env.all_proxy)
+  );
+}
+
+function protocolProxyUrl(url: string) {
+  const protocol = new URL(url).protocol;
+
+  if (protocol === "https:") {
+    return (
+      stringValue(process.env.HTTPS_PROXY) ||
+      stringValue(process.env.https_proxy) ||
+      stringValue(process.env.HTTP_PROXY) ||
+      stringValue(process.env.http_proxy)
+    );
+  }
+
+  return stringValue(process.env.HTTP_PROXY) || stringValue(process.env.http_proxy);
+}
+
+function proxySuffix(url: string) {
+  return subscriptionProxyUrl(url) ? " / proxy configured" : "";
 }
 
 export function parseSubscription(content: string): SubscriptionNode[] {

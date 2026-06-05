@@ -11,7 +11,7 @@ import ts from "typescript";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-function loadSubscriptionModule() {
+function loadSubscriptionModule(options = {}) {
   const filename = join(__dirname, "subscription.ts");
   const source = readFileSync(filename, "utf8");
   const compiled = ts.transpileModule(source, {
@@ -24,13 +24,25 @@ function loadSubscriptionModule() {
   }).outputText;
 
   const cjsModule = { exports: {} };
+  const testRequire = (id) => {
+    if (id === "undici" && options.undici) {
+      return options.undici;
+    }
+    return require(id);
+  };
+
   const context = vm.createContext({
     Buffer,
     AbortSignal,
+    Response,
     URL,
+    fetch: options.fetchImpl,
     module: cjsModule,
     exports: cjsModule.exports,
-    require,
+    process: {
+      env: options.env ?? {},
+    },
+    require: testRequire,
   });
 
   vm.runInContext(compiled, context, { filename });
@@ -38,6 +50,33 @@ function loadSubscriptionModule() {
 }
 
 const { parseSubscription, toXrayOutbound } = loadSubscriptionModule();
+
+test("configured subscription proxy is passed to fetch", async () => {
+  const fetchCalls = [];
+  const proxyUrls = [];
+  const { fetchSubscription: fetchWithProxy } = loadSubscriptionModule({
+    env: {
+      XSWITCH_SUBSCRIPTION_PROXY: "http://127.0.0.1:7890",
+    },
+    fetchImpl: async (_url, init) => {
+      fetchCalls.push(init);
+      return new Response("trojan://password@example.com:443#Proxy");
+    },
+    undici: {
+      ProxyAgent: class TestProxyAgent {
+        constructor(proxyUrl) {
+          this.proxyUrl = proxyUrl;
+          proxyUrls.push(proxyUrl);
+        }
+      },
+    },
+  });
+
+  await fetchWithProxy("https://subscription.example.com/sub");
+
+  assert.equal(proxyUrls[0], "http://127.0.0.1:7890");
+  assert.equal(fetchCalls[0].dispatcher.proxyUrl, "http://127.0.0.1:7890");
+});
 
 test("trojan peer URL parameters become Xray TLS stream settings", () => {
   const [node] = parseSubscription(

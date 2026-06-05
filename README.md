@@ -33,6 +33,7 @@ export XSWITCH_DATA_DIR='/var/lib/xswitch'
 export XSWITCH_XRAY_CONFIG='/usr/local/etc/xray/config.json'
 export XSWITCH_OUTBOUND_TAG='proxy'
 export XSWITCH_RESTART_COMMAND='systemctl restart xray'
+export XSWITCH_SUBSCRIPTION_PROXY='http://127.0.0.1:7890'
 ```
 
 说明：
@@ -42,6 +43,7 @@ export XSWITCH_RESTART_COMMAND='systemctl restart xray'
 - `XSWITCH_XRAY_CONFIG`：要修改的 Xray 配置文件。
 - `XSWITCH_OUTBOUND_TAG`：切换时替换的 outbound tag。你的 Xray 路由应指向这个 tag。
 - `XSWITCH_RESTART_COMMAND`：切换后执行的重启命令。设置为空字符串可跳过重启。
+- `XSWITCH_SUBSCRIPTION_PROXY`：拉取订阅时使用的 HTTP/HTTPS 代理。不设置时会尝试读取 `HTTPS_PROXY`、`HTTP_PROXY`、`ALL_PROXY` 等常见代理环境变量。
 
 ## 构建和运行
 
