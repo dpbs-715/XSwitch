@@ -2,12 +2,14 @@ import type { BusyState } from "./ui-types";
 
 export function SubscriptionControls({
   subscriptionUrl,
+  subscriptionSources,
   busy,
   onSubscriptionChange,
   onSave,
   onRefresh,
 }: {
   subscriptionUrl: string;
+  subscriptionSources: string[];
   busy: BusyState;
   onSubscriptionChange: (value: string) => void;
   onSave: () => void;
@@ -34,6 +36,32 @@ export function SubscriptionControls({
             onChange={(event) => onSubscriptionChange(event.target.value)}
           />
         </label>
+        {subscriptionSources.length > 0 ? (
+          <label className="grid gap-1.5" htmlFor="subscription-source">
+            <span className="label-kicker">已保存源</span>
+            <select
+              className="control-input h-10 truncate"
+              disabled={busy !== null}
+              id="subscription-source"
+              name="subscription-source"
+              value={
+                subscriptionSources.includes(subscriptionUrl) ? subscriptionUrl : ""
+              }
+              onChange={(event) => {
+                if (event.target.value) {
+                  onSubscriptionChange(event.target.value);
+                }
+              }}
+            >
+              <option value="">手动输入</option>
+              {subscriptionSources.map((source) => (
+                <option key={source} value={source}>
+                  {source}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
           <button
             className="btn btn-secondary min-w-28"

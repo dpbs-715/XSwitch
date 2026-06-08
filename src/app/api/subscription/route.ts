@@ -1,5 +1,9 @@
 import { assertAuthorized } from "@/lib/server-settings";
-import { readSubscriptionUrl, saveSubscriptionUrl } from "@/lib/storage";
+import {
+  readSubscriptionSources,
+  readSubscriptionUrl,
+  saveSubscriptionUrl,
+} from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +18,7 @@ export async function GET(request: Request) {
     ok: true,
     data: {
       url: await readSubscriptionUrl(),
+      sources: await readSubscriptionSources(),
     },
   });
 }
@@ -34,6 +39,6 @@ export async function POST(request: Request) {
     );
   }
 
-  await saveSubscriptionUrl(url);
-  return Response.json({ ok: true, data: { url } });
+  const sources = await saveSubscriptionUrl(url);
+  return Response.json({ ok: true, data: { url, sources } });
 }

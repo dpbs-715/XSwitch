@@ -9,6 +9,7 @@ export type StatusPayload = {
   settings: AppSettings;
   hasSubscription: boolean;
   subscriptionUrl: string | null;
+  subscriptionSources: string[];
   currentConnection: CurrentConnection;
   nodeCount: number;
   updatedAt: string | null;

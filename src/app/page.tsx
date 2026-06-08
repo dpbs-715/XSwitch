@@ -27,6 +27,7 @@ import type {
 export default function Home() {
   const [password, setPassword] = useState("");
   const [subscriptionUrl, setSubscriptionUrl] = useState("");
+  const [subscriptionSources, setSubscriptionSources] = useState<string[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [currentConnection, setCurrentConnection] =
     useState<CurrentConnection | null>(null);
@@ -105,6 +106,7 @@ export default function Home() {
       setSettings(payload.data.settings);
       setCurrentConnection(payload.data.currentConnection);
       setSubscriptionUrl(payload.data.subscriptionUrl ?? "");
+      setSubscriptionSources(payload.data.subscriptionSources);
       setUpdatedAt(payload.data.updatedAt);
       setToast({
         tone: "ok",
@@ -142,24 +144,33 @@ export default function Home() {
 
   async function saveSubscription() {
     await runBusy("save", async () => {
-      await api<{ url: string }>("/api/subscription", {
-        method: "POST",
-        body: JSON.stringify({ url: subscriptionUrl }),
-      });
+      const payload = await api<{ url: string; sources: string[] }>(
+        "/api/subscription",
+        {
+          method: "POST",
+          body: JSON.stringify({ url: subscriptionUrl }),
+        },
+      );
+      setSubscriptionUrl(payload.url);
+      setSubscriptionSources(payload.sources);
       setToast({ tone: "ok", message: "订阅链接已保存。" });
     });
   }
 
   async function refreshSubscription() {
     await runBusy("refresh", async () => {
-      const payload = await api<{ nodes: SubscriptionNode[]; updatedAt: string }>(
-        "/api/refresh",
-        {
-          method: "POST",
-          body: JSON.stringify({ url: subscriptionUrl }),
-        },
-      );
+      const payload = await api<{
+        nodes: SubscriptionNode[];
+        updatedAt: string;
+        url: string;
+        sources: string[];
+      }>("/api/refresh", {
+        method: "POST",
+        body: JSON.stringify({ url: subscriptionUrl }),
+      });
       setNodes(payload.nodes);
+      setSubscriptionUrl(payload.url);
+      setSubscriptionSources(payload.sources);
       setUpdatedAt(payload.updatedAt);
       setSelectedId(payload.nodes[0]?.id ?? null);
       setToast({ tone: "ok", message: `已刷新 ${payload.nodes.length} 个节点。` });
@@ -264,6 +275,7 @@ export default function Home() {
         <div className="grid gap-4 lg:min-h-0">
           <SubscriptionControls
             busy={busy}
+            subscriptionSources={subscriptionSources}
             subscriptionUrl={subscriptionUrl}
             onRefresh={refreshSubscription}
             onSave={saveSubscription}

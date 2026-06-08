@@ -39,13 +39,18 @@ export async function POST(request: Request) {
       );
     }
 
-    await Promise.all([saveSubscriptionUrl(url), saveNodeCache(nodes)]);
+    const [sources] = await Promise.all([
+      saveSubscriptionUrl(url),
+      saveNodeCache(nodes),
+    ]);
 
     return Response.json({
       ok: true,
       data: {
         updatedAt: new Date().toISOString(),
         nodes,
+        url,
+        sources,
       },
     });
   } catch (error) {
