@@ -128,8 +128,12 @@ export function parseSubscription(content: string): SubscriptionNode[] {
   );
 }
 
-export function toXrayOutbound(node: SubscriptionNode, tag: string) {
-  const config = node.config;
+export function toXrayOutbound(
+  node: SubscriptionNode,
+  tag: string,
+  existingOutbound?: Record<string, unknown>,
+) {
+  const config = preserveCompatibleCertificatePin(node, existingOutbound);
   const streamSettings = buildStreamSettings(config, node.protocol);
 
   if (node.protocol === "vmess") {
@@ -617,7 +621,7 @@ function buildStreamSettings(
   const alpn = stringArrayValue(config.alpn);
   const pinnedPeerCertSha256 = stringArrayValue(
     config.pinnedPeerCertSha256,
-  );
+  )?.join(",");
   const publicKey =
     stringValue(config.publicKey) || stringValue(config.pbk);
   const shortId = stringValue(config.shortId) || stringValue(config.sid);
@@ -668,6 +672,56 @@ function buildStreamSettings(
         }
       : undefined,
   });
+}
+
+function preserveCompatibleCertificatePin(
+  node: SubscriptionNode,
+  existingOutbound?: Record<string, unknown>,
+) {
+  const sourcePin = stringArrayValue(node.config.pinnedPeerCertSha256);
+  if (sourcePin?.length || !existingOutbound) {
+    return node.config;
+  }
+
+  const security =
+    stringValue(node.config.tls) || (node.protocol === "trojan" ? "tls" : "");
+  const streamSettings = recordValue(existingOutbound.streamSettings);
+  const tlsSettings = recordValue(streamSettings?.tlsSettings);
+  const existingPin = stringArrayValue(tlsSettings?.pinnedPeerCertSha256);
+
+  if (
+    security !== "tls" ||
+    stringValue(streamSettings?.security) !== "tls" ||
+    !existingPin?.length
+  ) {
+    return node.config;
+  }
+
+  const targetServerName =
+    stringValue(node.config.sni) ||
+    stringValue(node.config.peer) ||
+    stringValue(node.config.host) ||
+    node.address;
+  const existingServerName =
+    stringValue(tlsSettings?.serverName) ||
+    outboundServerAddress(existingOutbound);
+
+  if (targetServerName.toLowerCase() !== existingServerName.toLowerCase()) {
+    return node.config;
+  }
+
+  return {
+    ...node.config,
+    pinnedPeerCertSha256: existingPin.join(","),
+  };
+}
+
+function outboundServerAddress(outbound: Record<string, unknown>) {
+  const settings = recordValue(outbound.settings);
+  const servers = arrayValue(settings?.servers);
+  const vnext = arrayValue(settings?.vnext);
+  const server = recordValue(servers?.[0]) || recordValue(vnext?.[0]);
+  return stringValue(server?.address);
 }
 
 function toSubscriptionNode(raw: string, node: ParsedUrlNode): SubscriptionNode {
@@ -760,6 +814,16 @@ function decodeBase64(value: string) {
 
 function stringValue(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function recordValue(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function arrayValue(value: unknown): unknown[] | undefined {
+  return Array.isArray(value) ? value : undefined;
 }
 
 function numberValue(value: unknown, fallback?: number) {

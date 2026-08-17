@@ -45,6 +45,10 @@ export XSWITCH_SUBSCRIPTION_PROXY='http://127.0.0.1:7890'
 - `XSWITCH_RESTART_COMMAND`：切换后执行的重启命令。设置为空字符串可跳过重启。
 - `XSWITCH_SUBSCRIPTION_PROXY`：拉取订阅时使用的 HTTP/HTTPS 代理。不设置时会尝试读取 `HTTPS_PROXY`、`HTTP_PROXY`、`ALL_PROXY` 等常见代理环境变量。
 
+### Xray TLS 证书指纹
+
+新版 Xray 已移除 `allowInsecure`。如果节点必须依赖证书指纹，请先在当前 outbound 的 `tlsSettings.pinnedPeerCertSha256` 中配置并验证指纹。此后切换到相同 SNI（`serverName`）的节点时，XS Switch 会保留该指纹；切换到不同 SNI 时不会复用，以免错误信任另一张证书。订阅自身提供的指纹优先。
+
 ## 构建和运行
 
 ```bash

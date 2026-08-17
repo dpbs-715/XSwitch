@@ -19,13 +19,19 @@ export async function switchXrayNode(node: SubscriptionNode) {
   const config = JSON.parse(rawConfig) as XrayConfig;
   const backupPath = `${settings.xrayConfigPath}.bak`;
 
-  await copyFile(settings.xrayConfigPath, backupPath);
-
-  const outbound = toXrayOutbound(node, settings.outboundTag);
   const outbounds = Array.isArray(config.outbounds) ? config.outbounds : [];
   const existingIndex = outbounds.findIndex(
     (entry) => entry.tag === settings.outboundTag,
   );
+  const existingOutbound =
+    existingIndex >= 0 ? outbounds[existingIndex] : undefined;
+  const outbound = toXrayOutbound(
+    node,
+    settings.outboundTag,
+    existingOutbound,
+  );
+
+  await copyFile(settings.xrayConfigPath, backupPath);
 
   if (existingIndex >= 0) {
     outbounds[existingIndex] = outbound;

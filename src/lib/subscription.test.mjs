@@ -90,7 +90,7 @@ test("trojan peer URL parameters become Xray TLS stream settings", () => {
     security: "tls",
     tlsSettings: {
       serverName: "tls-peer.example.com",
-      pinnedPeerCertSha256: ["abc123"],
+      pinnedPeerCertSha256: "abc123",
     },
     sockopt: {
       tcpFastOpen: true,
@@ -126,12 +126,83 @@ test("cached trojan peer parameters still become Xray TLS stream settings", () =
     security: "tls",
     tlsSettings: {
       serverName: "tls-peer.example.com",
-      pinnedPeerCertSha256: ["abc123", "def456"],
+      pinnedPeerCertSha256: "abc123,def456",
     },
     sockopt: {
       tcpFastOpen: true,
     },
   });
+});
+
+test("switching to the same TLS server name preserves its verified certificate pin", () => {
+  const [node] = parseSubscription(
+    "trojan://test-password@new-edge.example.com:20001?allowInsecure=1&peer=tls-peer.example.com#Trojan",
+  );
+  const existingOutbound = {
+    protocol: "trojan",
+    settings: {
+      servers: [{ address: "old-edge.example.com", port: 20000 }],
+    },
+    streamSettings: {
+      security: "tls",
+      tlsSettings: {
+        serverName: "TLS-PEER.EXAMPLE.COM",
+        pinnedPeerCertSha256: "verified-pin",
+      },
+    },
+  };
+
+  const outbound = toXrayOutbound(node, "proxy", existingOutbound);
+
+  assert.equal(
+    outbound.streamSettings.tlsSettings.pinnedPeerCertSha256,
+    "verified-pin",
+  );
+  assert.equal("allowInsecure" in outbound.streamSettings.tlsSettings, false);
+});
+
+test("certificate pin is not reused for a different TLS server name", () => {
+  const [node] = parseSubscription(
+    "trojan://test-password@new-edge.example.com:20001?peer=new-peer.example.com#Trojan",
+  );
+  const existingOutbound = {
+    streamSettings: {
+      security: "tls",
+      tlsSettings: {
+        serverName: "old-peer.example.com",
+        pinnedPeerCertSha256: "old-pin",
+      },
+    },
+  };
+
+  const outbound = toXrayOutbound(node, "proxy", existingOutbound);
+
+  assert.equal(
+    "pinnedPeerCertSha256" in outbound.streamSettings.tlsSettings,
+    false,
+  );
+});
+
+test("subscription certificate pin takes precedence over an existing pin", () => {
+  const [node] = parseSubscription(
+    "trojan://test-password@new-edge.example.com:20001?peer=tls-peer.example.com&pinnedPeerCertSha256=subscription-pin#Trojan",
+  );
+  const existingOutbound = {
+    streamSettings: {
+      security: "tls",
+      tlsSettings: {
+        serverName: "tls-peer.example.com",
+        pinnedPeerCertSha256: "existing-pin",
+      },
+    },
+  };
+
+  const outbound = toXrayOutbound(node, "proxy", existingOutbound);
+
+  assert.equal(
+    outbound.streamSettings.tlsSettings.pinnedPeerCertSha256,
+    "subscription-pin",
+  );
 });
 
 test("vless reality URL parameters become Xray reality settings", () => {
