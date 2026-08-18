@@ -47,7 +47,9 @@ export XSWITCH_SUBSCRIPTION_PROXY='http://127.0.0.1:7890'
 
 ### Xray TLS 证书指纹
 
-新版 Xray 已移除 `allowInsecure`。如果节点必须依赖证书指纹，请先在当前 outbound 的 `tlsSettings.pinnedPeerCertSha256` 中配置并验证指纹。此后切换到相同 SNI（`serverName`）的节点时，XS Switch 会保留该指纹；切换到不同 SNI 时不会复用，以免错误信任另一张证书。订阅自身提供的指纹优先。
+XS Switch 会为 TLS 节点显式生成 `fingerprint: "chrome"`，用于模拟 Chrome 的 TLS ClientHello。订阅提供其他指纹时以订阅为准；切换到相同 SNI（`serverName`）的节点时，也会保留当前 outbound 中手工设置的指纹。
+
+新版 Xray 已移除 `allowInsecure`。如果节点必须依赖证书校验指纹，请先在当前 outbound 的 `tlsSettings.pinnedPeerCertSha256` 中配置并验证证书 SHA256。此后切换到相同 SNI 的节点时，XS Switch 会保留该值；切换到不同 SNI 时不会复用，以免错误信任另一张证书。订阅自身提供的值优先。
 
 ## 构建和运行
 

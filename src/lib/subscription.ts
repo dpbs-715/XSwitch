@@ -22,6 +22,7 @@ const subscriptionUserAgents = [
 
 const subscriptionFetchTimeoutMs = 12_000;
 const subscriptionProxyEnvVar = "XSWITCH_SUBSCRIPTION_PROXY";
+const defaultTlsFingerprint = "chrome";
 
 const informationNodePattern =
   /剩余流量|套餐到期|到期时间|官网|官方|流量|直连地址|更换客户端|邀请|返佣|https?:\/\/|bit\.ly|expire|traffic|subscription|status/i;
@@ -133,7 +134,7 @@ export function toXrayOutbound(
   tag: string,
   existingOutbound?: Record<string, unknown>,
 ) {
-  const config = preserveCompatibleCertificatePin(node, existingOutbound);
+  const config = mergeCompatibleTlsOverrides(node, existingOutbound);
   const streamSettings = buildStreamSettings(config, node.protocol);
 
   if (node.protocol === "vmess") {
@@ -617,7 +618,9 @@ function buildStreamSettings(
   const requestPath = stringValue(config.path);
   const tcpFastOpen = booleanValue(config.tfo);
   const fingerprint =
-    stringValue(config.fingerprint) || stringValue(config.fp);
+    stringValue(config.fingerprint) ||
+    stringValue(config.fp) ||
+    (security === "tls" ? defaultTlsFingerprint : "");
   const alpn = stringArrayValue(config.alpn);
   const pinnedPeerCertSha256 = stringArrayValue(
     config.pinnedPeerCertSha256,
@@ -674,12 +677,11 @@ function buildStreamSettings(
   });
 }
 
-function preserveCompatibleCertificatePin(
+function mergeCompatibleTlsOverrides(
   node: SubscriptionNode,
   existingOutbound?: Record<string, unknown>,
 ) {
-  const sourcePin = stringArrayValue(node.config.pinnedPeerCertSha256);
-  if (sourcePin?.length || !existingOutbound) {
+  if (!existingOutbound) {
     return node.config;
   }
 
@@ -687,12 +689,11 @@ function preserveCompatibleCertificatePin(
     stringValue(node.config.tls) || (node.protocol === "trojan" ? "tls" : "");
   const streamSettings = recordValue(existingOutbound.streamSettings);
   const tlsSettings = recordValue(streamSettings?.tlsSettings);
-  const existingPin = stringArrayValue(tlsSettings?.pinnedPeerCertSha256);
 
   if (
     security !== "tls" ||
     stringValue(streamSettings?.security) !== "tls" ||
-    !existingPin?.length
+    !tlsSettings
   ) {
     return node.config;
   }
@@ -710,9 +711,27 @@ function preserveCompatibleCertificatePin(
     return node.config;
   }
 
+  const sourceFingerprint =
+    stringValue(node.config.fingerprint) || stringValue(node.config.fp);
+  const existingFingerprint = stringValue(tlsSettings.fingerprint);
+  const sourcePin = stringArrayValue(node.config.pinnedPeerCertSha256);
+  const existingPin = stringArrayValue(tlsSettings.pinnedPeerCertSha256);
+  const preservedTlsSettings: Record<string, unknown> = {};
+
+  if (!sourceFingerprint && existingFingerprint) {
+    preservedTlsSettings.fingerprint = existingFingerprint;
+  }
+  if (!sourcePin?.length && existingPin?.length) {
+    preservedTlsSettings.pinnedPeerCertSha256 = existingPin.join(",");
+  }
+
+  if (Object.keys(preservedTlsSettings).length === 0) {
+    return node.config;
+  }
+
   return {
     ...node.config,
-    pinnedPeerCertSha256: existingPin.join(","),
+    ...preservedTlsSettings,
   };
 }
 

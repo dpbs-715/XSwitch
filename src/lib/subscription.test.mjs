@@ -91,6 +91,7 @@ test("trojan peer URL parameters become Xray TLS stream settings", () => {
     tlsSettings: {
       serverName: "tls-peer.example.com",
       pinnedPeerCertSha256: "abc123",
+      fingerprint: "chrome",
     },
     sockopt: {
       tcpFastOpen: true,
@@ -127,6 +128,7 @@ test("cached trojan peer parameters still become Xray TLS stream settings", () =
     tlsSettings: {
       serverName: "tls-peer.example.com",
       pinnedPeerCertSha256: "abc123,def456",
+      fingerprint: "chrome",
     },
     sockopt: {
       tcpFastOpen: true,
@@ -159,6 +161,35 @@ test("switching to the same TLS server name preserves its verified certificate p
     "verified-pin",
   );
   assert.equal("allowInsecure" in outbound.streamSettings.tlsSettings, false);
+});
+
+test("same TLS server name preserves an explicit ClientHello fingerprint", () => {
+  const [node] = parseSubscription(
+    "trojan://test-password@new-edge.example.com:20001?peer=tls-peer.example.com#Trojan",
+  );
+  const existingOutbound = {
+    streamSettings: {
+      security: "tls",
+      tlsSettings: {
+        serverName: "tls-peer.example.com",
+        fingerprint: "firefox",
+      },
+    },
+  };
+
+  const outbound = toXrayOutbound(node, "proxy", existingOutbound);
+
+  assert.equal(outbound.streamSettings.tlsSettings.fingerprint, "firefox");
+});
+
+test("TLS nodes explicitly default to the Chrome ClientHello fingerprint", () => {
+  const [node] = parseSubscription(
+    "trojan://test-password@edge.example.com:20001?peer=tls-peer.example.com#Trojan",
+  );
+
+  const outbound = toXrayOutbound(node, "proxy");
+
+  assert.equal(outbound.streamSettings.tlsSettings.fingerprint, "chrome");
 });
 
 test("certificate pin is not reused for a different TLS server name", () => {
@@ -203,6 +234,25 @@ test("subscription certificate pin takes precedence over an existing pin", () =>
     outbound.streamSettings.tlsSettings.pinnedPeerCertSha256,
     "subscription-pin",
   );
+});
+
+test("subscription ClientHello fingerprint takes precedence over an existing one", () => {
+  const [node] = parseSubscription(
+    "trojan://test-password@new-edge.example.com:20001?peer=tls-peer.example.com&fp=edge#Trojan",
+  );
+  const existingOutbound = {
+    streamSettings: {
+      security: "tls",
+      tlsSettings: {
+        serverName: "tls-peer.example.com",
+        fingerprint: "firefox",
+      },
+    },
+  };
+
+  const outbound = toXrayOutbound(node, "proxy", existingOutbound);
+
+  assert.equal(outbound.streamSettings.tlsSettings.fingerprint, "edge");
 });
 
 test("vless reality URL parameters become Xray reality settings", () => {
